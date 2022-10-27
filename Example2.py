@@ -42,15 +42,15 @@ SNP_L = df.loc[df['dataset'] == 'snp']
 sample_df = pd.concat((PD_L.sample(n=1100), SNP_L.sample(n=1100))) #df with 1100 PD and 1100 SNP
 # shuffle so data points are mixed
 sample_df = shuffle(sample_df)
-# reset idnex
+# reset index
 sample_df.reset_index(drop=True, inplace=True)
 # check number of entries from both classes are equal
 assert sample_df[sample_df.dataset == "pd"].shape[0] == 1100 #shape[0] checks if there are 1100 rows in mutations column
 assert sample_df[sample_df.dataset == "snp"].shape[0] == 1100
 X = sample_df.drop('dataset', axis=1) #Training data set created with equal numnber of PD and SNP, but dropped
 
-# X dataframes all have 1100 points without dataset
-X1 = shuffle(X)
+# X dataframes all have 2200 points without dataset
+X1 = shuffle(X) 
 X2 = shuffle(X)
 X3 = shuffle(X)
 
@@ -65,15 +65,14 @@ y2 = shuffle(y_col)
 y3 = shuffle(y_col)
 
 # **Split data into training and test**
-X_train1, X_test1, y_train1, y_test1 = train_test_split(X1, y1, random_state=42,
+X_train1, X_test1, y_train1, y_test1 = train_test_split(X1, y1, train_size = 0.8, random_state=42,
                                                         stratify=y1)  # Splits data into training and testing
-X_train2, X_test2, y_train2, y_test2 = train_test_split(X2, y2, random_state=42,
+X_train2, X_test2, y_train2, y_test2 = train_test_split(X2, y2, train_size = 0.8, random_state=42,
                                                         stratify=y2)  # Splits data into training and testing
-X_train3, X_test3, y_train3, y_test3 = train_test_split(X3, y3, random_state=42,
+X_train3, X_test3, y_train3, y_test3 = train_test_split(X3, y3, train_size = 0.8, random_state=42,
                                                         stratify=y3)  # Splits data into training and testing
-
 # **XGB Dmatrix training model**
-d_train1 = xgb.DMatrix(X_train1, label=y_train1)  # all features are floats
+d_train1 = xgb.DMatrix(X_train1, label=y_train1)  #all features are floats
 d_test1 = xgb.DMatrix(X_test1, label=y_test1)
 
 d_train2 = xgb.DMatrix(X_train2, label=y_train2)
@@ -85,9 +84,9 @@ d_test3 = xgb.DMatrix(X_test3, label=y_test3)
 param = {  # Dictionary of parameters to initally train the model
     'booster': 'gbtree',  # non-linear, tree method (default)
     'verbosity': 1,  # outputs the evaluation of each tree
-    'eta': 0.1,  # Same as learning rate, shrinkage of each step when approaching the optimum value
+    'eta': 0.3,  # Same as learning rate, shrinkage of each step when approaching the optimum value
     'colsample_bytree': 0.8,  # How much subsampling for each tree
-    'max_depth': 5,  # Greater the depth, more prone to overfitting; tune from CV
+    'max_depth': 6,  # Greater the depth, more prone to overfitting; tune from CV
     'eval_metric': ['auc', 'aucpr'],
     'min_child_weight': 1,
     'objective': 'binary:logistic'  # classifies the outcome as either 0 (SNP), or 1 (PD). Non multiclass classification
