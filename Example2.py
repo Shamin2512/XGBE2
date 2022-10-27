@@ -6,8 +6,7 @@ import pandas as pd  # import data for training, encoding and testing
 import numpy as np  # calc the mean and SD
 import xgboost as xgb  # XGboost Learning API
 import matplotlib.pyplot as plt  # graphing/plotting stuff
-# import random
-# from collections import Counter #imports collections module
+import random as rd
 from xgboost import XGBClassifier  # SK learn API for XGB model building
 from xgboost import XGBRegressor  # SK learn API for XGB regression
 from sklearn.metrics import (
@@ -22,8 +21,7 @@ from sklearn.model_selection import (
     train_test_split,  # Splits data frame into the training set and testing set
     GridSearchCV,  # Cross validation to improve hyperparameters
 )
-from sklearn.utils import shuffle
-
+from sklearn.utils import shuffle #shuffles rows
 
 xgb.set_config(verbosity=2)  # Print all XGB commands
 
@@ -35,44 +33,42 @@ df.drop(['pdbcode:chain:resnum:mutation'],
 df.columns = df.columns.str.replace(' ', '_')  # Removes gaps in column names
 df.replace(' ', '_', regex=True, inplace=True)  # Replace all blank spaces with underscore (none were present)
 
-# **Encoding the categorical data for dataframe y**
-# X_total = pd.get_dummies(df, columns=['dataset'], prefix=['Mutation'])
-# X_col = X_total['Mutation_pd'].copy().convert_dtypes(convert_integer=True) #Full dataframe with mutations column. 1 = PD, 0 = SNP
-df.reset_index(drop=True, inplace=True)  # resets index count to 0 in dataframe
+#**Create dataframe with 1100 of PD and SNP**
 
 PD_L = df.loc[df['dataset'] == 'pd']
 SNP_L = df.loc[df['dataset'] == 'snp']
 
 # concat
-sample_df = pd.concat((PD_L.sample(n=1100), SNP_L.sample(n=1100)), axis=0)
-# shuffle
+sample_df = pd.concat((PD_L.sample(n=1100), SNP_L.sample(n=1100))) #df with 1100 PD and 1100 SNP
+# shuffle so data points are mixed
 sample_df = shuffle(sample_df)
 # reset idnex
 sample_df.reset_index(drop=True, inplace=True)
 # check number of entries from both classes are equal
-assert sample_df[sample_df.dataset == "pd"].shape[0] == 1100
+assert sample_df[sample_df.dataset == "pd"].shape[0] == 1100 #shape[0] checks if there are 1100 rows in mutations column
 assert sample_df[sample_df.dataset == "snp"].shape[0] == 1100
+X = sample_df.drop('dataset', axis=1) #Training data set created with equal numnber of PD and SNP, but dropped
+print(X)
 
+# X dataframes all have 1100 points without dataset
+X1 = shuffle(X)
+X2 = shuffle(X)
+X3 = shuffle(X)
+print(X1, X2, X3)
 
-# count = X_col['Mutation'].values_counts()
-
-# print(X_col.isin([1]).value_counts())
-
-X_full = df.drop('dataset', axis=1).copy()  # X is dataframe with data used to train and predict if SNP or PD
-
-# X dataframes all have 1100 points
-X1 = X_full.sample(n=2200)
-X2 = X_full.sample(n=2200)
-X3 = X_full.sample(n=2200)
-
-y_encoded = pd.get_dummies(df, columns=['dataset'],
+# Y dataframe one hot encoding
+y_encoded = pd.get_dummies(sample_df, columns=['dataset'],
                            prefix=['Mutation'])  # y is df with mutations changing from object -> unint8 (integer)
-y_col = y_encoded['Mutation_pd'].copy().convert_dtypes()
+y_col = y_encoded['Mutation_pd'].copy().convert_dtypes() #equal number of PD and SNP afte encoding (y_col.value_counts())
 
-# y dataframes all have 2200 points
-y1 = y_col.sample(n=1100)
-y2 = y_col.sample(n=1100)
-y3 = y_col.sample(n=1100)
+#y dataframes all have 2200 points
+y1 = shuffle(y_col)
+y2 = shuffle(y_col)
+y3 = shuffle(y_col)
+
+
+breakpoint()
+
 
 # **Split data into training and test**
 X_train1, X_test1, y_train1, y_test1 = train_test_split(X1, y1, random_state=42,
