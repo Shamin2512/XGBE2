@@ -172,4 +172,3 @@ print(cm3)
 print("MCC:\n", matthews_corrcoef(y_test1, y_pred1), matthews_corrcoef(y_test2, y_pred2>0.5),matthews_corrcoef(y_test2, y_pred3>0.5))
 print("F1 Score:\n", f1_score(y_test3, y_pred1>0.5), f1_score(y_test3, y_pred3>0.5), f1_score(y_test3, y_pred3>0.5))
 
-
