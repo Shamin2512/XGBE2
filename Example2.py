@@ -48,27 +48,21 @@ sample_df.reset_index(drop=True, inplace=True)
 assert sample_df[sample_df.dataset == "pd"].shape[0] == 1100 #shape[0] checks if there are 1100 rows in mutations column
 assert sample_df[sample_df.dataset == "snp"].shape[0] == 1100
 X = sample_df.drop('dataset', axis=1) #Training data set created with equal numnber of PD and SNP, but dropped
-print(X)
 
 # X dataframes all have 1100 points without dataset
 X1 = shuffle(X)
 X2 = shuffle(X)
 X3 = shuffle(X)
-print(X1, X2, X3)
 
 # Y dataframe one hot encoding
 y_encoded = pd.get_dummies(sample_df, columns=['dataset'],
                            prefix=['Mutation'])  # y is df with mutations changing from object -> unint8 (integer)
-y_col = y_encoded['Mutation_pd'].copy().convert_dtypes() #equal number of PD and SNP afte encoding (y_col.value_counts())
+y_col = y_encoded['Mutation_pd'].copy().astype('int32') #equal number of PD and SNP afte encoding (y_col.value_counts())
 
 #y dataframes all have 2200 points
 y1 = shuffle(y_col)
 y2 = shuffle(y_col)
 y3 = shuffle(y_col)
-
-
-breakpoint()
-
 
 # **Split data into training and test**
 X_train1, X_test1, y_train1, y_test1 = train_test_split(X1, y1, random_state=42,
@@ -99,76 +93,18 @@ param = {  # Dictionary of parameters to initally train the model
     'objective': 'binary:logistic'  # classifies the outcome as either 0 (SNP), or 1 (PD). Non multiclass classification
 }
 
-model1 = xgb.train(param, d_train1, evals=[(d_test1, 'eval'), (d_train1, 'train')], num_boost_round=50,
-                   early_stopping_rounds=20)
-model2 = xgb.train(param, d_train2, evals=[(d_test2, 'eval'), (d_train2, 'train')], num_boost_round=50,
-                   early_stopping_rounds=20)
-model3 = xgb.train(param, d_train2, evals=[(d_test2, 'eval'), (d_train2, 'train')], num_boost_round=50,
-                   early_stopping_rounds=20)
-
-# Cross validation paramaters
-dmatrix_val1 = xgb.DMatrix(X1, y1)
-params = {
-    'objective': 'binary:hinge',
-    'colsample_bytree': 0.3,
-    'eta': 0.1,
-    'max_depth': 3
-}
-cross_val1 = xgb.cv(
-    params=params,
-    dtrain=dmatrix_val1,
-    nfold=5,
-    num_boost_round=50,
-    early_stopping_rounds=10,
-    metrics='error',
-    as_pandas=True,
-    seed=42
-)
-print(cross_val1.head())
-
-dmatrix_val2 = xgb.DMatrix(X2, y2)
-params = {
-    'objective': 'binary:hinge',
-    'colsample_bytree': 0.3,
-    'eta': 0.1,
-    'max_depth': 3
-}
-cross_val2 = xgb.cv(
-    params=params,
-    dtrain=dmatrix_val2,
-    nfold=5,
-    num_boost_round=50,
-    early_stopping_rounds=10,
-    metrics='error',
-    as_pandas=True,
-    seed=42
-)
-print(cross_val2.head())
-
-dmatrix_val3 = xgb.DMatrix(X3, y3)
-params = {
-    'objective': 'binary:hinge',
-    'colsample_bytree': 0.3,
-    'eta': 0.1,
-    'max_depth': 3
-}
-cross_val3 = xgb.cv(
-    params=params,
-    dtrain=dmatrix_val3,
-    nfold=5,
-    num_boost_round=50,
-    early_stopping_rounds=10,
-    metrics='error',
-    as_pandas=True,
-    seed=42
-)
-print(cross_val3.head())
+model1 = xgb.train(param, d_train1, evals=[(d_test1, 'eval'), (d_train1, 'train')], num_boost_round=100,
+                   early_stopping_rounds=10)
+model2 = xgb.train(param, d_train2, evals=[(d_test2, 'eval'), (d_train2, 'train')], num_boost_round=100,
+                   early_stopping_rounds=10)
+model3 = xgb.train(param, d_train2, evals=[(d_test2, 'eval'), (d_train2, 'train')], num_boost_round=100,
+                   early_stopping_rounds=10)
 
 # **Plot confusion matrix using the true and predicted values**
-# clf = xgb.XGBClassifier(**param)
-# clf.fit(X_train, y_train)
-# y_pred = clf.predict(X_test)
-# ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
+#clf = xgb.XGBClassifier(**param)
+#clf.fit(d_train1, y_test1)
+#y_pred = clf.predict(X_test)
+#ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
 
 y_pred1 = model1.predict(d_test1)  # No longer a pandas DF, is now a numpy array as Dmatrix
 y_pred2 = model2.predict(d_test2)  # No longer a pandas DF, is now a numpy array as Dmatrix
@@ -178,9 +114,10 @@ cm2 = confusion_matrix(y_test2, y_pred2 > 0.5)
 cm3 = confusion_matrix(y_test3, y_pred3 > 0.5)
 
 print("Confusion Matrix:\n", cm1)
-print(cm2)
-print(cm3)
-print("MCC:\n", matthews_corrcoef(y_test1, y_pred1), matthews_corrcoef(y_test2, y_pred2 > 0.5),
+print("Confusion Matrix:\n", cm2)
+print("Confusion Matrix:\n", cm3)
+
+print("MCC:\n", matthews_corrcoef(y_test1, y_pred1 >0.5), matthews_corrcoef(y_test2, y_pred2 > 0.5),
       matthews_corrcoef(y_test2, y_pred3 > 0.5))
 print("F1 Score:\n", f1_score(y_test3, y_pred1 > 0.5), f1_score(y_test3, y_pred3 > 0.5),
       f1_score(y_test3, y_pred3 > 0.5))
