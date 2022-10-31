@@ -20,6 +20,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import (
     train_test_split,  # Splits data frame into the training set and testing set
     GridSearchCV,  # Cross validation to improve hyperparameters
+from sklearn.ensemble import RandomForestClassifier #SK learn API
 )
 from sklearn.utils import shuffle #shuffles rows
 
@@ -33,10 +34,12 @@ df.drop(['pdbcode:chain:resnum:mutation'],
 df.columns = df.columns.str.replace(' ', '_')  # Removes gaps in column names
 df.replace(' ', '_', regex=True, inplace=True)  # Replace all blank spaces with underscore (none were present)
 
-#**Create dataframe with 1100 of PD and SNP**
+#**Randomly sample each dataset**
+sample_df[sample_df.dataset == "pd"].shape[0] == 
+sample_df[sample_df.dataset == "snp"].shape[0] == 1100
 
-PD_L = df.loc[df['dataset'] == 'pd']
-SNP_L = df.loc[df['dataset'] == 'snp']
+
+breakpoint()
 
 # concat
 sample_df = pd.concat((PD_L.sample(n=1100), SNP_L.sample(n=1100))) #df with 1100 PD and 1100 SNP
@@ -74,6 +77,8 @@ X_train3, X_test3, y_train3, y_test3 = train_test_split(X3, y3, train_size = 0.8
 # **XGB Dmatrix training model**
 d_train1 = xgb.DMatrix(X_train1, label=y_train1)  #all features are floats
 d_test1 = xgb.DMatrix(X_test1, label=y_test1)
+print(d_train1)
+breakpoint()
 
 d_train2 = xgb.DMatrix(X_train2, label=y_train2)
 d_test2 = xgb.DMatrix(X_test2, label=y_test2)
