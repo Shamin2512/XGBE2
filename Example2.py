@@ -20,52 +20,33 @@ from sklearn.metrics import (
 from sklearn.model_selection import (
     train_test_split,  # Splits data frame into the training set and testing set
     GridSearchCV,  # Cross validation to improve hyperparameters
+    )
 from sklearn.ensemble import RandomForestClassifier #SK learn API
-)
-from sklearn.utils import shuffle #shuffles rows
 
-xgb.set_config(verbosity=2)  # Print all XGB commands
+from sklearn.utils import shuffle #shuffles rows
 
 # **Create, clean and convert the train.csv dataset to a dataframe**
 df = pd.read_csv('E2.csv')  # Pandas creates data frame from the .csv mutation data
-df.drop(['pdbcode:chain:resnum:mutation'],
-        axis=1,
-        inplace=True)  # removes columns unrequired columns, updating the variable df
+df.drop(['pdbcode:chain:resnum:mutation'], axis=1, inplace=True)  # removes columns unrequired columns, updating the variable df
 df.columns = df.columns.str.replace(' ', '_')  # Removes gaps in column names
 df.replace(' ', '_', regex=True, inplace=True)  # Replace all blank spaces with underscore (none were present)
+df.reset_index(inplace = True)
 
-#**Randomly sample each dataset**
-sample_df[sample_df.dataset == "pd"].shape[0] == 
-sample_df[sample_df.dataset == "snp"].shape[0] == 1100
+#**Data prep**
+X = df.drop('dataset', axis =1)
+y_encoded = pd.get_dummies(df, columns=['dataset'])
+y = y_encoded['dataset_pd'].copy().astype('int32')
+print("Number of PD:", len(df.loc[df['dataset'] == 'pd']))
+print("Number of SNP:", len(df.loc[df['dataset'] == 'snp']))
+print(X)
+print(y)
 
-
-breakpoint()
-
-# concat
-sample_df = pd.concat((PD_L.sample(n=1100), SNP_L.sample(n=1100))) #df with 1100 PD and 1100 SNP
-# shuffle so data points are mixed
-sample_df = shuffle(sample_df)
-# reset index
-sample_df.reset_index(drop=True, inplace=True)
-# check number of entries from both classes are equal
-assert sample_df[sample_df.dataset == "pd"].shape[0] == 1100 #shape[0] checks if there are 1100 rows in mutations column
-assert sample_df[sample_df.dataset == "snp"].shape[0] == 1100
-X = sample_df.drop('dataset', axis=1) #Training data set created with equal numnber of PD and SNP, but dropped
-
-# X dataframes all have 2200 points without dataset
-X1 = shuffle(X) 
-X2 = shuffle(X)
-X3 = shuffle(X)
-
-# Y dataframe one hot encoding
-y_encoded = pd.get_dummies(sample_df, columns=['dataset'],
-                           prefix=['Mutation'])  # y is df with mutations changing from object -> unint8 (integer)
-y_col = y_encoded['Mutation_pd'].copy().astype('int32') #equal number of PD and SNP afte encoding (y_col.value_counts())
-
-#y dataframes all have 2200 points
-y1 = shuffle(y_col)
-y2 = shuffle(y_col)
-y3 = shuffle(y_col)
+#**Model training**
+clf = RandomForestClassifier(random_state = 42)
+X.fillna("0")
+clf.fit(X, y)
+print(clf)
+clf.predict(X)
 
 # **Split data into training and test**
 X_train1, X_test1, y_train1, y_test1 = train_test_split(X1, y1, train_size = 0.8, random_state=42,
