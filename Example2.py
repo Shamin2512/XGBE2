@@ -4,24 +4,30 @@
 # **import XGBoost and other ML modules**
 import pandas as pd  # import data for training, encoding and testing
 import numpy as np  # calc the mean and SD
-import xgboost as xgb  # XGboost Learning API
+#import xgboost as xgb  # XGboost Learning API
 import matplotlib.pyplot as plt  # graphing/plotting stuff
 import random as rd
-from xgboost import XGBClassifier  # SK learn API for XGB model building
-from xgboost import XGBRegressor  # SK learn API for XGB regression
+
+#from xgboost import XGBClassifier  # SK learn API for XGB model building
+#from xgboost import XGBRegressor  # SK learn API for XGB regression
+
 from sklearn.metrics import (
     matthews_corrcoef,  # MCC for evaluation
     f1_score,  # F1 score for evaluation
     accuracy_score,  # Accuracy for evaluation
     balanced_accuracy_score, roc_auc_score, make_scorer,  # Scoring metrics
     confusion_matrix,  # creates the confusion matrix - stats on how accurate the test set output is
-    ConfusionMatrixDisplay,  # draws the confusion matrix
-)
+    ConfusionMatrixDisplay)  # draws the confusion matrix
+    
 from sklearn.model_selection import (
     train_test_split,  # Splits data frame into the training set and testing set
     GridSearchCV,  # Cross validation to improve hyperparameters
     )
 from sklearn.ensemble import RandomForestClassifier #SK learn API
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
 
 from sklearn.utils import shuffle #shuffles rows
 
@@ -33,57 +39,41 @@ df.replace(' ', '_', regex=True, inplace=True)  # Replace all blank spaces with 
 df.reset_index(inplace = True)
 
 #**Data prep**
-X = df.drop('dataset', axis =1)
+X = df.drop('dataset', axis =1).fillna('0')
 y_encoded = pd.get_dummies(df, columns=['dataset'])
 y = y_encoded['dataset_pd'].copy().astype('int32')
 print("Number of PD:", len(df.loc[df['dataset'] == 'pd']))
 print("Number of SNP:", len(df.loc[df['dataset'] == 'snp']))
-print(X)
-print(y)
 
-#**Model training**
+#**Model training initialise**
 clf = RandomForestClassifier(random_state = 42)
-X.fillna("0")
 clf.fit(X, y)
-print(clf)
-clf.predict(X)
+StandardScaler().fit(X).transform(X)
 
+#**Parameters pipeline**
+pipeline = make_pipeline( #equivilant of fitting to XGB parameters
+    StandardScaler(),
+    LogisticRegression(solver='saga', max_iter=5000)
+    )
 # **Split data into training and test**
-X_train1, X_test1, y_train1, y_test1 = train_test_split(X1, y1, train_size = 0.8, random_state=42,
-                                                        stratify=y1)  # Splits data into training and testing
-X_train2, X_test2, y_train2, y_test2 = train_test_split(X2, y2, train_size = 0.8, random_state=42,
-                                                        stratify=y2)  # Splits data into training and testing
-X_train3, X_test3, y_train3, y_test3 = train_test_split(X3, y3, train_size = 0.8, random_state=42,
-                                                        stratify=y3)  # Splits data into training and testing
-# **XGB Dmatrix training model**
-d_train1 = xgb.DMatrix(X_train1, label=y_train1)  #all features are floats
-d_test1 = xgb.DMatrix(X_test1, label=y_test1)
-print(d_train1)
-breakpoint()
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.8, random_state=42, stratify=y)
 
-d_train2 = xgb.DMatrix(X_train2, label=y_train2)
-d_test2 = xgb.DMatrix(X_test2, label=y_test2)
+pipeline.fit(X_train, y_train)
 
-d_train3 = xgb.DMatrix(X_train3, label=y_train3)
-d_test3 = xgb.DMatrix(X_test3, label=y_test3)
+print(pipeline.fit)
+print(accuracy_score(pipeline.predict(X_test), y_test))
+print("MCC:\n", matthews_corrcoef(y_test, y_pred))
 
-param = {  # Dictionary of parameters to initally train the model
-    'booster': 'gbtree',  # non-linear, tree method (default)
-    'verbosity': 1,  # outputs the evaluation of each tree
-    'eta': 0.3,  # Same as learning rate, shrinkage of each step when approaching the optimum value
-    'colsample_bytree': 0.8,  # How much subsampling for each tree
-    'max_depth': 6,  # Greater the depth, more prone to overfitting; tune from CV
-    'eval_metric': ['auc', 'aucpr'],
-    'min_child_weight': 1,
-    'objective': 'binary:logistic'  # classifies the outcome as either 0 (SNP), or 1 (PD). Non multiclass classification
-}
+#    'booster': 'gbtree',  # non-linear, tree method (default)
+#    'verbosity': 1,  # outputs the evaluation of each tree
+#    'eta': 0.3,  # Same as learning rate, shrinkage of each step when approaching the optimum value
+#    'colsample_bytree': 0.8,  # How much subsampling for each tree
+#    'max_depth': 6,  # Greater the depth, more prone to overfitting; tune from CV
+#    'eval_metric': ['auc', 'aucpr'],
+#    'min_child_weight': 1,
+#    'objective': 'binary:logistic'  # classifies the outcome as either 0 (SNP), or 1 (PD). Non multiclass classification
+#}
 
-model1 = xgb.train(param, d_train1, evals=[(d_test1, 'eval'), (d_train1, 'train')], num_boost_round=100,
-                   early_stopping_rounds=10)
-model2 = xgb.train(param, d_train2, evals=[(d_test2, 'eval'), (d_train2, 'train')], num_boost_round=100,
-                   early_stopping_rounds=10)
-model3 = xgb.train(param, d_train2, evals=[(d_test2, 'eval'), (d_train2, 'train')], num_boost_round=100,
-                   early_stopping_rounds=10)
 
 # **Plot confusion matrix using the true and predicted values**
 #clf = xgb.XGBClassifier(**param)
