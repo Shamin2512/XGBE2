@@ -43,13 +43,13 @@ print("Number of SNP:", len(df.loc[df['dataset'] == 'snp']))
 #**Model training initialise**
 clf = RandomForestClassifier(random_state = 42)
 start = time.time()
-clf.fit(X, y)
+clf.fit(X, y) #classifier, get predictions for manual balancing
 StandardScaler().fit(X).transform(X)
 
 #**Parameters pipeline**
 pipeline = make_pipeline( #equivilant of fitting to XGB parameters
     StandardScaler(),
-    LogisticRegression(solver='saga', max_iter=2000, class_weight = [{0:8557286432160804, 1:1.0-8557286432160804}]),
+    LogisticRegression(solver='saga', max_iter=2000,
     verbose=2
     )
 # **Split data into training and test**
@@ -74,7 +74,6 @@ stop2=time.time()
 y_pred = clf.predict(X_test)
 print("Training time:", stop-start)
 print("Validation tuning time:", stop2-start2)
-print("Accuracy:\n", accuracy_score(pipeline.predict(X_test), y_test))
 print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
 print("MCC:\n", matthews_corrcoef(y_test, y_pred))
 print("F1:\n", f1_score(y_test, y_pred))
