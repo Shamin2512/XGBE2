@@ -6,6 +6,7 @@ import numpy as np  # calc the mean and SD
 import matplotlib.pyplot as plt  # graphing/plotting stuff
 import random as rd
 import time
+import sys
 
 from sklearn.metrics import (
     matthews_corrcoef,  # MCC for evaluation
@@ -24,6 +25,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.utils import shuffle #shuffles rows
+from sklearn.neighbors import KNeighborsClassifier #allows for confidence scores to be predicted for each
+
+np.set_printoptions(threshold=sys.maxsize) #full array printing 
 
 # **Create, clean and convert the train.csv dataset to a dataframe**
 df = pd.read_csv('E2.csv')  # Pandas creates data frame from the .csv mutation data
@@ -47,21 +51,24 @@ clf.fit(X, y) #classifier, get predictions for manual balancing
 StandardScaler().fit(X).transform(X)
 
 #**Parameters pipeline**
-pipeline = make_pipeline( #equivilant of fitting to XGB parameters
+pipeline = make_pipeline(#equivilant of fitting to XGB parameters
     StandardScaler(),
-    LogisticRegression(solver='saga', max_iter=2000,
+    LogisticRegression(solver='saga', max_iter=2000),
     verbose=2
     )
 # **Split data into training and test**
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.8, random_state=42, stratify=y)
-
 pipeline.fit(X_train, y_train) #scale training data
-stop = time.time()
+cs = clf.predict_proba(X)
+with open('ConfidenceScores.txt', 'w+') as f:
+    data=f.read()
+    f.write(str(cs))
+
+
 #weights = np.linspace(0.0,0.99,200) # creates 200 evenly spaced values between 0 and 0.99
 #param_grid = {'class_weight': [{0:x, 1:1.0-x} for x in weights]} # applys weights to each value between 0 and 0.99
-start2=time.time()
 
-gridsearch = GridSearchCV(
+gridsearch = GridSearchCV( #validation
     estimator = LogisticRegression(solver='saga'),
     param_grid = {}, #dictionary of parameters to search through
     cv = StratifiedKFold(),
