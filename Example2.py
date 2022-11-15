@@ -1,67 +1,84 @@
 # Example 2 is inbalanced data set; ~2200 in PD and ~1100 in SNP. Data must be correctly split into training and testing
 # Goal is to predict if protein is SNP or PD
 
-import pandas as pd  # import data for training, encoding and testing
-import numpy as np  # calc the mean and SD
-import matplotlib.pyplot as plt  # graphing/plotting stuff
+#Imports the required modules and packages
+import pandas as pd  #Import data for training, encoding and testing
+import numpy as np  #Calc the mean and SD
+import matplotlib.pyplot as plt  #Graphing/plotting stuff
 import random as rd
 import time
+import sys
 
-from sklearn.metrics import (
-    matthews_corrcoef,  # MCC for evaluation
-    f1_score,  # F1 score for evaluation
-    balanced_accuracy_score, roc_auc_score, make_scorer,  # Scoring metrics
-    confusion_matrix,  # creates the confusion matrix - stats on how accurate the test set output is
-    )
-from sklearn.model_selection import (
+from sklearn.metrics import(
+    matthews_corrcoef,  # CC for evaluation
+    f1_score,  #F1 score for evaluation
+    balanced_accuracy_score, roc_auc_score, make_scorer,  #Scoring metrics
+    confusion_matrix,  #Creates the confusion matrix - stats on how accurate the test set output is
+        )
+from sklearn.model_selection import(
     train_test_split,  # Splits data frame into the training set and testing set
     GridSearchCV,  # Cross validation to improve hyperparameters
     StratifiedKFold
-    )
-from sklearn.ensemble import RandomForestClassifier #SK learn API
+        )
+from sklearn.ensemble import RandomForestClassifier #SK learn API for classificastion random forests
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.utils import shuffle #shuffles rows
+from sklearn.neighbors import KNeighborsClassifier #allows for confidence scores to be predicted for each
+from sklearn.tree import export_graphviz
 
-# **Create, clean and convert the train.csv dataset to a dataframe**
-df = pd.read_csv('E2.csv')  # Pandas creates data frame from the .csv mutation data
-df.drop(['pdbcode:chain:resnum:mutation'], axis=1, inplace=True)  # removes columns unrequired columns, updating the variable df
-df.columns = df.columns.str.replace(' ', '_')  # Removes gaps in column names
+np.set_printoptions(threshold=sys.maxsize) #full array printing
+
+
+
+#Create, clean and convert dataset E2.csv to PD dataframe**
+df = pd.read_csv('E2.csv')  #Create PD data frame from .csv
+df.drop(['pdbcode:chain:resnum:mutation'], axis=1, inplace=True)  #Removes unrequired columns
+df.columns = df.columns.str.replace(' ', '_')  # Removes any blank attributes
 df.replace(' ', '_', regex=True, inplace=True)  # Replace all blank spaces with underscore (none were present)
-df.reset_index(inplace = True)
+df.reset_index(drop=True, inplace = True) #Resets index numbering from 0 and drops column
+X_properties = df.drop('dataset', axis =1).fillna('0') #Instances for classification training
+y_encoded = pd.get_dummies(df, columns=['dataset']) #Encodes dataset column so "PD" and "SNP" attributes are  0 or 1
+y_dataset = y_encoded['dataset_pd'].copy().astype('int32') # Column where 1 = PD, 0 = SNP, intergers
 
-#**Data prep**
-X = df.drop('dataset', axis =1).fillna('0')
-y_encoded = pd.get_dummies(df, columns=['dataset'])
-y = y_encoded['dataset_pd'].copy().astype('int32')
 print("Total samples:", len(df))
 print("Number of PD:", len(df.loc[df['dataset'] == 'pd']))
 print("Number of SNP:", len(df.loc[df['dataset'] == 'snp']))
 
-#**Model training initialise**
-clf = RandomForestClassifier(random_state = 42)
-start = time.time()
-clf.fit(X, y)
-StandardScaler().fit(X).transform(X)
+#training and test split
 
-#**Parameters pipeline**
-pipeline = make_pipeline( #equivilant of fitting to XGB parameters
+X_train, X_test, y_train, y_test = train_test_split(X_properties, y_dataset, train_size = 0.8, random_state=42, stratify=y_dataset) #80% training and 20% testing split. Strartify ensures fixed poportion of y is in both sets
+start=time.time() #Start timer for model building
+clf = RandomForestClassifier(random_state = 42) #Defines the Random Forest
+tree = clf.fit(X_train, y_train) #Generates a random forest from the training dataset
+StandardScaler().fit(X_train).transform(X_train) #Scales data 
+pipeline = make_pipeline( #Sets the random forest parameters
     StandardScaler(),
-    LogisticRegression(solver='saga', max_iter=2000, class_weight = [{0:8557286432160804, 1:1.0-8557286432160804}]),
+    LogisticRegression(solver='saga', max_iter=2000),
     verbose=2
     )
+
+export_graphviz(out_file=None,
+                tree,
+                feature_names=None,
+                filled=True,
+                rounded=True)
+
+
+cs = clf.predict_proba(X) #Outputs the predictions on an instance's classification for each tree
+stop=time.time()
+    
 # **Split data into training and test**
-X_train, X_test, y_train, y_test = train_test_split(X, y, train_size = 0.8, random_state=42, stratify=y)
+print(X, y)
+with open('SNPorPD.txt', 'w+') as f:
+        data=f.read()
+        f.write(str(y.to_string()))
 
-pipeline.fit(X_train, y_train) #scale training data
-stop = time.time()
-#weights = np.linspace(0.0,0.99,200) # creates 200 evenly spaced values between 0 and 0.99
-#param_grid = {'class_weight': [{0:x, 1:1.0-x} for x in weights]} # applys weights to each value between 0 and 0.99
-start2=time.time()
+pipeline.fit(X, y) #applies list if transformers to give a fitted model
 
-gridsearch = GridSearchCV(
+gridsearch = GridSearchCV( #validation
     estimator = LogisticRegression(solver='saga'),
     param_grid = {}, #dictionary of parameters to search through
     cv = StratifiedKFold(),
@@ -69,12 +86,10 @@ gridsearch = GridSearchCV(
     scoring = 'f1',
     verbose = 3 
     ).fit(X_train, y_train)
-stop2=time.time()
+
 
 y_pred = clf.predict(X_test)
 print("Training time:", stop-start)
-print("Validation tuning time:", stop2-start2)
-print("Accuracy:\n", accuracy_score(pipeline.predict(X_test), y_test))
 print("Confusion Matrix:\n", confusion_matrix(y_test, y_pred))
 print("MCC:\n", matthews_corrcoef(y_test, y_pred))
 print("F1:\n", f1_score(y_test, y_pred))
