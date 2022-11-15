@@ -9,6 +9,8 @@ import random as rd
 import time
 import sys
 
+from sklearn import tree
+
 from sklearn.metrics import(
     matthews_corrcoef,  # CC for evaluation
     f1_score,  #F1 score for evaluation
@@ -21,13 +23,14 @@ from sklearn.model_selection import(
     StratifiedKFold
         )
 from sklearn.ensemble import RandomForestClassifier #SK learn API for classificastion random forests
-
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.utils import shuffle #shuffles rows
 from sklearn.neighbors import KNeighborsClassifier #allows for confidence scores to be predicted for each
-from sklearn.tree import export_graphviz
+
+
 
 np.set_printoptions(threshold=sys.maxsize) #full array printing
 
@@ -51,8 +54,16 @@ print("Number of SNP:", len(df.loc[df['dataset'] == 'snp']))
 
 X_train, X_test, y_train, y_test = train_test_split(X_properties, y_dataset, train_size = 0.8, random_state=42, stratify=y_dataset) #80% training and 20% testing split. Strartify ensures fixed poportion of y is in both sets
 start=time.time() #Start timer for model building
-clf = RandomForestClassifier(random_state = 42) #Defines the Random Forest
-tree = clf.fit(X_train, y_train) #Generates a random forest from the training dataset
+clf = RandomForestClassifier(random_state = 42, n_estimators = 100) #Defines the Random Forest
+clf.fit(X_train, y_train) #Generates a random forest from the training dataset
+
+fig, axes = plt.subplots(nrows = 1,ncols = 1,figsize = (10,10), dpi=1200)
+tree.plot_tree(clf.estimators_[45],
+               feature_names = None, 
+               class_names= None,
+               filled = True)
+plt.savefig('clf_individualtree.png', bbox_inches = 'tight', pad_inches=0)
+
 StandardScaler().fit(X_train).transform(X_train) #Scales data 
 pipeline = make_pipeline( #Sets the random forest parameters
     StandardScaler(),
@@ -60,11 +71,8 @@ pipeline = make_pipeline( #Sets the random forest parameters
     verbose=2
     )
 
-export_graphviz(out_file=None,
-                tree,
-                feature_names=None,
-                filled=True,
-                rounded=True)
+
+
 
 
 cs = clf.predict_proba(X) #Outputs the predictions on an instance's classification for each tree
